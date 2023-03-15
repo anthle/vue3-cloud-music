@@ -1,17 +1,49 @@
 <script setup lang="ts">
 import { useMainStore } from '@/stores/main'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type { AnyObject } from 'env'
 import { useRouter } from 'vue-router'
 import { ArrowForwardIosRound, ExitToAppRound } from '@vicons/material'
 import { UserProfile } from '@vicons/carbon'
 import { Moon, SunnySharp } from '@vicons/ionicons5'
+import { getUserInfo, getUserDetail } from '@/service'
 
 const mainStore = useMainStore()
-const showUserPopover = ref(true)
+let showUserPopover = ref(false)
 const userDetail = ref<AnyObject>()
 const singBtnLoading = ref(false)
 const router = useRouter()
+
+// 监听登录状态 获取用户信息
+watch(
+	() => mainStore.isLogin,
+	(val) => {
+		if (val) {
+			getUserProfile()
+		}
+	}
+)
+
+const getUserProfile = () => {
+	if (mainStore.userProfile?.userId) {
+		getUserDetailInfo(mainStore.userProfile.profile.userId)
+	} else {
+		getUserInfo().then((res) => {
+			getUserDetailInfo(res.data.profile.userId)
+		})
+	}
+}
+
+// 获取User详情数据
+const getUserDetailInfo = (uid: string) => {
+	getUserDetail(uid).then((res) => {
+		if (res?.data.code === 200) {
+			mainStore.userProfile = res.data
+			localStorage.userPorfile = JSON.stringify(res.data)
+			userDetail.value = res.data
+		}
+	})
+}
 
 const handleSignInClick = () => {
 	console.log(123)
@@ -25,6 +57,11 @@ const handlePositiveClick = () => {
 }
 const handleThemeSwitchUpdateChange = () => {
 	mainStore.toggleTheme()
+}
+
+const handleNameClick = () => {
+	const res = userDetail.value && (showUserPopover.value = !showUserPopover.value)
+	console.log(userDetail.value)
 }
 </script>
 
@@ -47,7 +84,7 @@ const handleThemeSwitchUpdateChange = () => {
 						<template #trigger>
 							<p
 								class="pl-2 text-xs turncate opacity-80 hover:opacity-100 cursor-pointer w-30 trigger"
-								@click="() => userDetail && showUserPopover != showUserPopover"
+								@click="handleNameClick"
 							>
 								123
 							</p>
@@ -77,7 +114,7 @@ const handleThemeSwitchUpdateChange = () => {
 									{{ mainStore.userProfile.pcSign ? '已签到' : ' 签到' }}</n-button
 								>
 							</div>
-							<div class="mt-3 hover:bg-neutral-200/20 dark:border-gray-200/20 border-solid">
+							<div class="mt-3 hover:bg-neutral-200/20 dark:border-gray-200/20">
 								<!-- 个人信息设置 -->
 								<div class="flex justify-between items-center py-2 px-4 cursor-pointer" @click="handleInfoEditClick">
 									<div class="flex items-center text-base">

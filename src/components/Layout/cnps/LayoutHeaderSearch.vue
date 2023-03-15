@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, type CSSProperties } from 'vue'
+import { ref, computed, onMounted, type CSSProperties } from 'vue'
 import { ArrowBackIosSharp, ArrowForwardIosRound } from '@vicons/material'
 import { Search } from '@vicons/ionicons5'
 import { Delete } from '@vicons/carbon'
@@ -15,7 +15,27 @@ const router = useRouter()
 
 const spread = ref(false)
 
+const inputRef = ref()
+
+const searchWrapContainerRef = ref()
+
 const showPopover = ref(false)
+
+const containerStyle = computed(() => {
+	let hasLen = mainStore.searchKeyword.length > 0
+	let style: CSSProperties = {
+		background: themeVars.value.modalColor,
+		zIndex: 1000,
+		width: hasLen ? '420px' : '384px'
+	}
+	if (hasLen) {
+		style = {
+			...style,
+			transition: 'width ease-in-out 0.3'
+		}
+	}
+	return style
+})
 
 const { state: hotSearchList, isLoading: hotSearchLoading } = useAsyncState(
 	getHotSearchList().then((res: any) => res.data.data),
@@ -38,9 +58,7 @@ const arrowIconClass = (value: string) => {
 }
 
 const handleCheckAllClick = () => {
-	if (defaultHeight.value === '100%') {
-		return
-	}
+	if (defaultHeight.value === '100%') return
 	spread.value = !spread.value
 }
 
@@ -71,6 +89,18 @@ const handleClearClick = (e: MouseEvent, index: number) => {
 	e.stopPropagation()
 	mainStore.removeSearchHistory(index)
 }
+
+const handleBodyClick = (ev: MouseEvent) => {
+	if (!ev.composedPath().includes(inputRef.value) && !ev.composedPath().includes(searchWrapContainerRef.value)) {
+		showPopover.value = false
+		spread.value = false
+	}
+}
+
+onMounted(() => {
+	// document.body.addEventListener('keydown',handleKeyDown())
+	document.body.addEventListener('click', handleBodyClick)
+})
 </script>
 
 <template>
@@ -83,7 +113,7 @@ const handleClearClick = (e: MouseEvent, index: number) => {
 		</div>
 	</div>
 	<div class="relative w-50">
-		<div class="warpInput">
+		<div class="warpInput" ref="inputRef">
 			<n-input
 				size="small"
 				round
@@ -100,8 +130,10 @@ const handleClearClick = (e: MouseEvent, index: number) => {
 			</n-input>
 			<transition name="fade-in-scale-up">
 				<div
+					v-show="showPopover"
 					class="searchWrapContainer absolute top-10 origin-top-left rounded-sm shadow-lg dark:shadow-black/60 z-10"
 					ref="searchWrapContainerRef"
+					:style="containerStyle"
 				>
 					<n-scrollbar style="max-height: 500px">
 						<div class="p-4 pb-0">
